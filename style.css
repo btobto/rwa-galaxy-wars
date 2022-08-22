@@ -1,0 +1,12 @@
+body {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	color: white;
+	font-family: 'JetBrains Mono';
+	background-color: darkblue;
+}
+
+h1 {
+	margin-bottom: 0;
+}
