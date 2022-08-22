@@ -1,6 +1,7 @@
-import { distinctUntilChanged, fromEvent, interval, map, merge, scan, startWith, tap, withLatestFrom } from "rxjs";
-import { fps } from "./constants";
+import { distinctUntilChanged, fromEvent, interval, map, merge, range, scan, startWith, tap, toArray, withLatestFrom } from "rxjs";
+import { fps, starNumber } from "./constants";
 import { keysBuffer } from "./game";
+import { Star } from "./interfaces";
 import { Player } from "./player";
 import { Renderer } from "./renderer";
 
@@ -14,6 +15,15 @@ canvas.height = 600;
 const player = new Player(canvas.width / 2, canvas.height / 2);
 const renderer = new Renderer(canvas, ctx);
 
+const starStream$ = range(1, starNumber).pipe(
+	map((): Star => ({
+		x: Math.floor(Math.random() * canvas.width),
+		y: Math.floor(Math.random() * canvas.height),
+		size: Math.random() * 3 + 1,
+	})),
+	toArray(),
+)
+
 const keysDown$ = fromEvent(document, 'keydown');
 const keysUp$ = fromEvent(document, 'keyup');
 
@@ -25,13 +35,21 @@ const keyboard$ = merge(keysDown$, keysUp$).pipe(
 
 const galaxyWars$ = interval(fps).pipe(
 	withLatestFrom(
-		keyboard$
+		keyboard$,
+		starStream$,
 	),
-	map(([interval, keys]: [number, string[]]) => keys),
-	tap((keys: string[]) => {
+	tap(([interval, keys, stars]: [number, string[], Star[]]) => {
+		stars.forEach((star: Star) => {
+			if (star.y >= canvas.height) {
+				star.y = 0;
+			}
+			star.y += star.size;
+		});
+	}),
+	tap(([interval, keys, stars]: [number, string[], Star[]]) => {
 		console.log(keys);
 		player.move(keys);
-		renderer.draw(player);
+		renderer.draw(player, stars);
 	}),
 );
 
