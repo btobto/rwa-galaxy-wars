@@ -1,9 +1,3 @@
-export const run = (
-	images: HTMLImageElement[]
-) => {
-	images.forEach(img => console.log("a " + img.src));
-}
-
 export const keysBuffer = (buffer: string[], event: KeyboardEvent): string[] => {
 	const result = [...buffer];
 
@@ -16,3 +10,11 @@ export const keysBuffer = (buffer: string[], event: KeyboardEvent): string[] => 
 
 	return result;
 }
+
+export const getRandomIntInclusive = (min: number, max: number): number => (
+	Math.floor(Math.random() * (max - min + 1) + min)
+);
+
+export const isOffScreen = (y: number, height: number): boolean => (
+	y >= height
+);

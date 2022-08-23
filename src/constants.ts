@@ -5,3 +5,4 @@ export const SPRITE_NAMES = [
 	'player.png',
 	'enemy.png',
 ];
+export const ENEMY_FREQUENCY = 1500;

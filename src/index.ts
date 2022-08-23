@@ -1,6 +1,7 @@
 import { distinctUntilChanged, forkJoin, from, fromEvent, interval, map, merge, mergeMap, of, range, scan, startWith, switchMap, tap, toArray, withLatestFrom, zip } from "rxjs";
-import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES } from "./constants";
-import { keysBuffer, run } from "./game";
+import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES, ENEMY_FREQUENCY } from "./constants";
+import { Enemy } from "./enemy";
+import { isOffScreen, keysBuffer } from "./game";
 import { Star } from "./interfaces";
 import { Player } from "./player";
 import { Renderer } from "./renderer";
@@ -9,8 +10,8 @@ const scoreContainer = document.getElementById('score');
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-canvas.width = 500;
-canvas.height = 600;
+canvas.width = 1000;
+canvas.height = 700;
 
 const sprites: HTMLImageElement[] = SPRITE_NAMES.map((name: string) => {
 	const sprite = new Image();
@@ -32,7 +33,21 @@ const player = new Player(
 
 const renderer = new Renderer(canvas, ctx);
 
-const starStream$ = range(1, STAR_NUMBER).pipe(
+const enemies$ = interval(ENEMY_FREQUENCY).pipe(
+	startWith([]),
+	scan((enemyArray: Enemy[]) => {
+		const enemy = new Enemy(
+			Math.floor(Math.random() * canvas.width),
+			-64,
+			sprites[1],
+		);
+
+		enemyArray.push(enemy);
+		return enemyArray;
+	}, []),
+)
+
+const star$ = range(1, STAR_NUMBER).pipe(
 	map((): Star => ({
 		x: Math.floor(Math.random() * canvas.width),
 		y: Math.floor(Math.random() * canvas.height),
@@ -53,19 +68,27 @@ const keyboard$ = merge(keysDown$, keysUp$).pipe(
 const galaxyWars$ = interval(FPS).pipe(
 	withLatestFrom(
 		keyboard$,
-		starStream$,
+		star$,
+		enemies$
 	),
-	tap(([interval, keys, stars]: [number, string[], Star[]]) => {
+	tap(([interval, keys, stars, enemies]: [number, string[], Star[], Enemy[]]) => {
+		// console.log(keys);
 		stars.forEach((star: Star) => {
 			if (star.y >= canvas.height) {
 				star.y = 0;
 			}
 			star.y += star.size;
 		});
-	}),
-	tap(([interval, keys, stars]: [number, string[], Star[]]) => {
-		console.log(keys);
 		player.move(keys);
-		renderer.draw(player, stars);
+		console.log(enemies);
+		enemies.forEach(enemy => {
+			if (isOffScreen(enemy.y, canvas.height)) {
+				const index = enemies.indexOf(enemy);
+				enemies.splice(index, 1);
+			} else {
+				enemy.move();
+			}
+		});
+		renderer.draw(player, stars, enemies);
 	}),
 );
