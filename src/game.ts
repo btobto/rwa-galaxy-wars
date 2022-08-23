@@ -1,3 +1,9 @@
+export const run = (
+	images: HTMLImageElement[]
+) => {
+	images.forEach(img => console.log("a " + img.src));
+}
+
 export const keysBuffer = (buffer: string[], event: KeyboardEvent): string[] => {
 	const result = [...buffer];
 

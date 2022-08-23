@@ -1,21 +1,38 @@
-import { distinctUntilChanged, fromEvent, interval, map, merge, range, scan, startWith, tap, toArray, withLatestFrom } from "rxjs";
-import { fps, starNumber } from "./constants";
-import { keysBuffer } from "./game";
+import { distinctUntilChanged, forkJoin, from, fromEvent, interval, map, merge, mergeMap, of, range, scan, startWith, switchMap, tap, toArray, withLatestFrom, zip } from "rxjs";
+import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES } from "./constants";
+import { keysBuffer, run } from "./game";
 import { Star } from "./interfaces";
 import { Player } from "./player";
 import { Renderer } from "./renderer";
 
-const stats = document.getElementById('stats');
+const scoreContainer = document.getElementById('score');
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
 canvas.width = 500;
 canvas.height = 600;
 
-const player = new Player(canvas.width / 2, canvas.height / 2);
+const sprites: HTMLImageElement[] = SPRITE_NAMES.map((name: string) => {
+	const sprite = new Image();
+	sprite.src = `${SPRITE_PATH}/${name}`;
+	return sprite;
+});
+
+const spritesLoaded$ = zip(
+	...sprites.map(sprite => fromEvent(sprite, 'load')),
+);
+
+spritesLoaded$.subscribe(() => galaxyWars$.subscribe());
+
+const player = new Player(
+	canvas.width / 2, 
+	canvas.height / 2,
+	sprites[0],
+	);
+
 const renderer = new Renderer(canvas, ctx);
 
-const starStream$ = range(1, starNumber).pipe(
+const starStream$ = range(1, STAR_NUMBER).pipe(
 	map((): Star => ({
 		x: Math.floor(Math.random() * canvas.width),
 		y: Math.floor(Math.random() * canvas.height),
@@ -33,7 +50,7 @@ const keyboard$ = merge(keysDown$, keysUp$).pipe(
 	distinctUntilChanged(),
 );
 
-const galaxyWars$ = interval(fps).pipe(
+const galaxyWars$ = interval(FPS).pipe(
 	withLatestFrom(
 		keyboard$,
 		starStream$,
@@ -52,8 +69,3 @@ const galaxyWars$ = interval(fps).pipe(
 		renderer.draw(player, stars);
 	}),
 );
-
-galaxyWars$.subscribe(
-	
-);
-

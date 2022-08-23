@@ -1,14 +1,13 @@
 export class Player {
+
 	constructor(
 		public x: number,
 		public y: number,
-	) {}
+		public sprite: HTMLImageElement
+	) {	}
 
 	draw(ctx: CanvasRenderingContext2D) {
-		ctx.strokeStyle = 'yellow';
-		ctx.fillStyle = 'black';
-		ctx.strokeRect(this.x, this.y, 50, 50);
-		ctx.fillRect(this.x, this.y, 50, 50);
+		ctx.drawImage(this.sprite, this.x, this.y, 50, 50);
 	}
 
 	move(keys: string[]) {
