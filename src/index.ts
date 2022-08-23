@@ -1,17 +1,15 @@
-import { distinctUntilChanged, forkJoin, from, fromEvent, interval, map, merge, mergeMap, of, range, scan, startWith, switchMap, tap, toArray, withLatestFrom, zip } from "rxjs";
-import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES, ENEMY_FREQUENCY } from "./constants";
-import { Enemy } from "./enemy";
-import { isOffScreen, keysBuffer } from "./game";
-import { Star } from "./interfaces";
-import { Player } from "./player";
-import { Renderer } from "./renderer";
+import { distinctUntilChanged, fromEvent, interval, map, merge, range, scan, startWith, tap, toArray, withLatestFrom, zip } from "rxjs";
+import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES, ENEMY_FREQUENCY, PLAYER_SIZE, ENEMY2_SIZE, ENEMY1_SIZE, CANVAS_WIDTH, CANVAS_HEIGHT } from "./constants";
+import { keysBuffer, updateState } from "./game";
+import { Actor, Input, Star, State } from "./interfaces";
+import { draw } from "./renderer";
 
 const scoreContainer = document.getElementById('score');
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-canvas.width = 1000;
-canvas.height = 700;
+canvas.width = CANVAS_WIDTH;
+canvas.height = CANVAS_HEIGHT;
 
 const sprites: HTMLImageElement[] = SPRITE_NAMES.map((name: string) => {
 	const sprite = new Image();
@@ -25,29 +23,55 @@ const spritesLoaded$ = zip(
 
 spritesLoaded$.subscribe(() => galaxyWars$.subscribe());
 
-const player = new Player(
-	canvas.width / 2, 
-	canvas.height / 2,
-	sprites[0],
-	);
+const player: Actor = {
+	x: canvas.width / 2,
+	y: canvas.height / 2,
+	sprite: sprites[0],
+	width: PLAYER_SIZE.width,
+	height: PLAYER_SIZE.height,
+	speed: PLAYER_SIZE.speed,
+};
 
-const renderer = new Renderer(canvas, ctx);
+const initialState: State = {
+	player: player,
+	enemies: [],
+	playerBullets: [],
+	enemyBullets: [],
+	score: 0,
+	isGameOver: false,
+	stars: [],
+};
 
 const enemies$ = interval(ENEMY_FREQUENCY).pipe(
 	startWith([]),
-	scan((enemyArray: Enemy[]) => {
-		const enemy = new Enemy(
-			Math.floor(Math.random() * canvas.width),
-			-64,
-			sprites[1],
-		);
-
+	scan((enemyArray: Actor[], interval: number) => {
+		let enemy: Actor;
+		if (interval % 5 === 0) {
+			enemy = {
+				x: Math.floor(Math.random() * canvas.width),
+				y: -ENEMY2_SIZE.height,
+				sprite: sprites[2],
+				width: ENEMY2_SIZE.width,
+				height: ENEMY2_SIZE.height,
+				speed: ENEMY2_SIZE.speed, 
+			};
+		} else {
+			enemy = {
+				x: Math.floor(Math.random() * canvas.width),
+				y: -ENEMY1_SIZE.height,
+				sprite: sprites[1],
+				width: ENEMY1_SIZE.width,
+				height: ENEMY1_SIZE.height,
+				speed: ENEMY1_SIZE.speed, 
+			};
+		}
 		enemyArray.push(enemy);
+
 		return enemyArray;
 	}, []),
 )
 
-const star$ = range(1, STAR_NUMBER).pipe(
+const stars$ = range(1, STAR_NUMBER).pipe(
 	map((): Star => ({
 		x: Math.floor(Math.random() * canvas.width),
 		y: Math.floor(Math.random() * canvas.height),
@@ -68,27 +92,17 @@ const keyboard$ = merge(keysDown$, keysUp$).pipe(
 const galaxyWars$ = interval(FPS).pipe(
 	withLatestFrom(
 		keyboard$,
-		star$,
+		stars$,
 		enemies$
 	),
-	tap(([interval, keys, stars, enemies]: [number, string[], Star[], Enemy[]]) => {
-		// console.log(keys);
-		stars.forEach((star: Star) => {
-			if (star.y >= canvas.height) {
-				star.y = 0;
-			}
-			star.y += star.size;
-		});
-		player.move(keys);
-		console.log(enemies);
-		enemies.forEach(enemy => {
-			if (isOffScreen(enemy.y, canvas.height)) {
-				const index = enemies.indexOf(enemy);
-				enemies.splice(index, 1);
-			} else {
-				enemy.move();
-			}
-		});
-		renderer.draw(player, stars, enemies);
+	map((data): Input => ({
+		interval: data[0],
+		keys: data[1],
+		stars: data[2],
+		enemies: data[3]
+	})),
+	scan(updateState, initialState),
+	tap((state: State) => {
+		draw(ctx, scoreContainer, state);
 	}),
 );

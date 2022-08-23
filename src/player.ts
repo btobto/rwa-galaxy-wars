@@ -3,11 +3,11 @@ export class Player {
 	constructor(
 		public x: number,
 		public y: number,
-		public sprite: HTMLImageElement
+		// public sprite: 
 	) {	}
 
 	draw(ctx: CanvasRenderingContext2D) {
-		ctx.drawImage(this.sprite, this.x, this.y, 50, 50);
+		// ctx.drawImage(this.sprite, this.x, this.y, 50, 50);
 	}
 
 	move(keys: string[]) {
