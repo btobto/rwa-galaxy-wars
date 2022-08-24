@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack",
-    "watch": "webpack --watch"
+    "watch": "webpack --watch",
+    "w-dbg": "webpack --watch --config ./webpack.config.js"
   },
   "keywords": [],
   "author": "",

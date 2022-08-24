@@ -1,70 +1,86 @@
-import { CANVAS_HEIGHT } from "./constants";
-import { Actor, Input, Star, State } from "./interfaces";
-
-export const keysBuffer = (buffer: string[], event: KeyboardEvent): string[] => {
-	const result = [...buffer];
-
-	const index = buffer.indexOf(event.code);
-	if (event.type === 'keydown' && index === -1) {
-		result.push(event.code);
-	} else if (event.type === 'keyup' && index > -1) {
-		result.splice(index, 1);
-	}
-
-	return result;
-}
+import { BULLET_DEFAULT, CANVAS_HEIGHT, CANVAS_WIDTH } from "./constants";
+import { GameObject, Input, State } from "./interfaces";
 
 export const getRandomIntInclusive = (min: number, max: number): number => (
 	Math.floor(Math.random() * (max - min + 1) + min)
 );
 
-export const isOffScreen = (y: number, height: number): boolean => (
-	y >= height
-);
-
-const updateStars = (stars: Star[]) => {
-	stars.forEach((star: Star) => {
-		if (star.y >= CANVAS_HEIGHT) {
-			star.y = 0;
-		}
-		star.y += star.size;
-	});
-}
-
-const processInput = (player: Actor, keys: string[]) => {
-	if (keys.includes('ArrowLeft')) {
-		player.x -= 5;
-	}
-
-	if (keys.includes('ArrowRight')) {
-		player.x += 5;
-	}
-
-	if (keys.includes('ArrowUp')) {
-		player.y -= 5;
-	}
-
-	if (keys.includes('ArrowDown')) {
-		player.y += 5;
-	}
-}
-
-const updateEnemies = (enemies: Actor[]) => {
-	enemies.forEach(enemy => {
-		if (enemy.y >= CANVAS_HEIGHT) {
-			const index = enemies.indexOf(enemy);
-			enemies.splice(index, 1);
-		} else {
-			enemy.y += 5;
-			// enemy.x += getRandomIntInclusive(-2, +2);	
-		}
-	});
-}
+const move = (
+	object: GameObject, 
+	distanceX: number, 
+	distanceY: number,
+	correctPosition: Function
+) => {
+	object.x += distanceX;
+	object.y += distanceY;
+	correctPosition();
+} 
 
 export const updateState = (state: State, input: Input): State => {
-	updateStars(input.stars);
-	processInput(state.player, input.keys);
-	updateEnemies(input.enemies);
+	input.stars.forEach((star: GameObject) => {
+		move(
+			star, 0, star.speed,
+			() => { if (star.y >= CANVAS_HEIGHT) star.y = 0; }
+		);
+	});
+
+	let dx = 0;
+	let dy = 0;
+	if (input.keys.includes('ArrowLeft')) {
+		dx -= 5;
+	}
+	if (input.keys.includes('ArrowRight')) {
+		dx += 5;
+	}
+	if (input.keys.includes('ArrowUp')) {
+		dy -= 5;
+	}
+	if (input.keys.includes('ArrowDown')) {
+		dy += 5;
+	}
+	move(
+		state.player, dx, dy,
+		() => {
+			if (state.player.x < 0) state.player.x = 0;
+			else if (state.player.x + state.player.width >= CANVAS_WIDTH) state.player.x = CANVAS_WIDTH - state.player.width;
+			if (state.player.y < 0) state.player.y = 0;
+			else if (state.player.y + state.player.height >= CANVAS_HEIGHT) state.player.y = CANVAS_HEIGHT - state.player.height;
+		}
+	);
+
+	state.enemies.forEach(enemy => {
+		move(
+			enemy, 
+			0, // getRandomIntInclusive(-2, +2) 
+			enemy.speed,
+			() => {
+				if (enemy.y >= CANVAS_HEIGHT) {
+					const index = state.enemies.indexOf(enemy);
+					state.enemies.splice(index, 1);			
+				}
+			}
+			);
+	});
+
+	state.playerBullets.forEach(bullet => {
+		move (bullet, 0, -bullet.speed,
+			() => {
+				if (bullet.y <= 0) {
+					const index = state.playerBullets.indexOf(bullet);
+					state.playerBullets.splice(index, 1);
+				}
+			}
+		);
+	});
+
+	if (input.interval % 10 === 0 && input.keys.includes('Space')) {
+		state.playerBullets.push({
+			...BULLET_DEFAULT,
+			x: state.player.x + state.player.width / 2 - BULLET_DEFAULT.width / 2,
+			y: state.player.y,
+			speed: state.player.speed + 2,
+		});
+	}
 
 	return {
 		player: state.player,
@@ -75,4 +91,4 @@ export const updateState = (state: State, input: Input): State => {
 		isGameOver: false,
 		stars: input.stars,	
 	}
-}
+};

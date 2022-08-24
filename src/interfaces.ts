@@ -1,38 +1,24 @@
-export interface Star {
-	x: number,
-	y: number,
-	size: number,
-}
-
-export interface Actor {
-	x: number,
-	y: number,
-	readonly sprite: HTMLImageElement,
-	readonly width: number,
-	readonly height: number,
-	readonly speed: number,
-}
-
-export interface Bullet {
+export interface GameObject {
 	x: number,
 	y: number,
 	width: number,
 	height: number,
-};
-
+	speed: number,
+	sprite?: HTMLImageElement,
+}
 export interface Input {
 	interval: number, 
 	keys: string[], 
-	stars: Star[], 
-	enemies: Actor[]
+	stars: GameObject[], 
+	enemies: GameObject[],
 }
 
 export interface State {
-	player: Actor,
-	enemies: Actor[],
-	playerBullets: Bullet[],
-	enemyBullets: Bullet[]
+	player: GameObject,
+	enemies: GameObject[],
+	playerBullets: GameObject[],
+	enemyBullets: GameObject[]
 	score: number,
 	isGameOver: boolean,
-	stars: Star[],
+	stars: GameObject[],
 }

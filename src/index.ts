@@ -1,7 +1,8 @@
-import { distinctUntilChanged, fromEvent, interval, map, merge, range, scan, startWith, tap, toArray, withLatestFrom, zip } from "rxjs";
-import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES, ENEMY_FREQUENCY, PLAYER_SIZE, ENEMY2_SIZE, ENEMY1_SIZE, CANVAS_WIDTH, CANVAS_HEIGHT } from "./constants";
-import { keysBuffer, updateState } from "./game";
-import { Actor, Input, Star, State } from "./interfaces";
+import { auditTime, concatAll, debounceTime, distinctUntilChanged, filter, forkJoin, fromEvent, interval, map, mapTo, merge, mergeAll, of, range, sample, sampleTime, scan, startWith, take, tap, throttleTime, timestamp, toArray, withLatestFrom, zip, zipWith } from "rxjs";
+import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES, ENEMY_FREQUENCY, CANVAS_WIDTH, CANVAS_HEIGHT, PLAYER_DEFAULT, ENEMY2_DEFAULT, ENEMY1_DEFAULT } from "./constants";
+// import * as Constants from "./constants";
+import { getRandomIntInclusive, updateState } from "./game";
+import { GameObject, Input, State } from "./interfaces";
 import { draw } from "./renderer";
 
 const scoreContainer = document.getElementById('score');
@@ -17,19 +18,21 @@ const sprites: HTMLImageElement[] = SPRITE_NAMES.map((name: string) => {
 	return sprite;
 });
 
-const spritesLoaded$ = zip(
-	...sprites.map(sprite => fromEvent(sprite, 'load')),
-);
+// todo
+const getData$ = of(undefined);
+
+const spritesLoaded$ = forkJoin([
+	...sprites.map(sprite => fromEvent(sprite, 'load').pipe(take(1))),
+	getData$,
+]);
 
 spritesLoaded$.subscribe(() => galaxyWars$.subscribe());
 
-const player: Actor = {
-	x: canvas.width / 2,
-	y: canvas.height / 2,
+const player: GameObject = {
+	...PLAYER_DEFAULT,
+	x: canvas.width / 2 - PLAYER_DEFAULT.width / 2,
+	y: canvas.height / 1.5,
 	sprite: sprites[0],
-	width: PLAYER_SIZE.width,
-	height: PLAYER_SIZE.height,
-	speed: PLAYER_SIZE.speed,
 };
 
 const initialState: State = {
@@ -44,25 +47,21 @@ const initialState: State = {
 
 const enemies$ = interval(ENEMY_FREQUENCY).pipe(
 	startWith([]),
-	scan((enemyArray: Actor[], interval: number) => {
-		let enemy: Actor;
+	scan((enemyArray: GameObject[], interval: number) => {
+		let enemy: GameObject;
 		if (interval % 5 === 0) {
 			enemy = {
-				x: Math.floor(Math.random() * canvas.width),
-				y: -ENEMY2_SIZE.height,
+				...ENEMY2_DEFAULT,
+				x: getRandomIntInclusive(0, CANVAS_WIDTH - ENEMY2_DEFAULT.width),
+				y: -ENEMY2_DEFAULT.height,
 				sprite: sprites[2],
-				width: ENEMY2_SIZE.width,
-				height: ENEMY2_SIZE.height,
-				speed: ENEMY2_SIZE.speed, 
 			};
 		} else {
 			enemy = {
-				x: Math.floor(Math.random() * canvas.width),
-				y: -ENEMY1_SIZE.height,
+				...ENEMY1_DEFAULT,
+				x: getRandomIntInclusive(0, CANVAS_WIDTH - ENEMY1_DEFAULT.width),
+				y: -ENEMY1_DEFAULT.height,
 				sprite: sprites[1],
-				width: ENEMY1_SIZE.width,
-				height: ENEMY1_SIZE.height,
-				speed: ENEMY1_SIZE.speed, 
 			};
 		}
 		enemyArray.push(enemy);
@@ -72,11 +71,16 @@ const enemies$ = interval(ENEMY_FREQUENCY).pipe(
 )
 
 const stars$ = range(1, STAR_NUMBER).pipe(
-	map((): Star => ({
-		x: Math.floor(Math.random() * canvas.width),
-		y: Math.floor(Math.random() * canvas.height),
-		size: Math.random() * 3 + 1,
-	})),
+	map((): GameObject => {
+		const attribute = Math.random() * 3 + 1;
+		return {
+			x: Math.floor(Math.random() * canvas.width),
+			y: Math.floor(Math.random() * canvas.height),
+			width: attribute,
+			height: attribute,
+			speed: attribute,
+		}
+	}),
 	toArray(),
 )
 
@@ -85,7 +89,18 @@ const keysUp$ = fromEvent(document, 'keyup');
 
 const keyboard$ = merge(keysDown$, keysUp$).pipe(
 	startWith([]),
-	scan(keysBuffer, []),
+	scan((buffer: string[], event: KeyboardEvent): string[] => {
+		const result = [...buffer];
+	
+		const index = buffer.indexOf(event.code);
+		if (event.type === 'keydown' && index === -1) {
+			result.push(event.code);
+		} else if (event.type === 'keyup' && index > -1) {
+			result.splice(index, 1);
+		}
+	
+		return result;
+	}, []),
 	distinctUntilChanged(),
 );
 
@@ -93,16 +108,14 @@ const galaxyWars$ = interval(FPS).pipe(
 	withLatestFrom(
 		keyboard$,
 		stars$,
-		enemies$
+		enemies$,
 	),
 	map((data): Input => ({
 		interval: data[0],
 		keys: data[1],
 		stars: data[2],
-		enemies: data[3]
+		enemies: data[3],
 	})),
 	scan(updateState, initialState),
-	tap((state: State) => {
-		draw(ctx, scoreContainer, state);
-	}),
+	tap((state: State) => draw(ctx, scoreContainer, state)),
 );
