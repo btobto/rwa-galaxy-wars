@@ -2,7 +2,7 @@ import { combineLatest, distinctUntilChanged, forkJoin, fromEvent, interval, map
 import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES, ENEMY_FREQUENCY, CANVAS_WIDTH, CANVAS_HEIGHT, PLAYER_DEFAULT, ENEMY2_DEFAULT, ENEMY1_DEFAULT, ENEMY_SHOOTING_FREQUENCY, BULLET_DEFAULT } from "./constants";
 // import * as Constants from "./constants";
 import { generateBullet, generateEnemy, getRandomIntInclusive, updateState } from "./game";
-import { GameObject, Input, Particle, Ship, State } from "./interfaces";
+import { GameObject, Input, State } from "./interfaces";
 import { draw } from "./renderer";
 
 const scoreContainer = document.getElementById('score');
@@ -28,13 +28,13 @@ const spritesLoaded$ = forkJoin([
 
 spritesLoaded$.subscribe(() => gameLoop$.subscribe());
 
-ENEMY1_DEFAULT.sprite = sprites[1];
-ENEMY2_DEFAULT.sprite = sprites[2];
-const player: Ship = {
+ENEMY1_DEFAULT.spriteOrColor = sprites[1];
+ENEMY2_DEFAULT.spriteOrColor = sprites[2];
+const player: GameObject = {
 	...PLAYER_DEFAULT,
 	x: canvas.width / 2 - PLAYER_DEFAULT.width / 2,
 	y: canvas.height / 1.5,
-	sprite: sprites[0],
+	spriteOrColor: sprites[0],
 };
 
 const initialState: State = {
@@ -43,12 +43,14 @@ const initialState: State = {
 	score: 0,
 	isGameOver: false,
 	stars: [],
+	playerShots: [],
+	enemyShots: [],
 };
 
 const enemies$ = interval(ENEMY_FREQUENCY).pipe(
 	startWith([]),
-	scan((enemyArray: Ship[], intrvl: number) => {
-		let enemy: Ship;
+	scan((enemyArray: GameObject[], intrvl: number) => {
+		let enemy: GameObject;
 		if (intrvl % 5 === 0) {
 			enemy = generateEnemy(ENEMY2_DEFAULT);
 		} else {
@@ -64,7 +66,7 @@ const enemies$ = interval(ENEMY_FREQUENCY).pipe(
 );
 
 const stars$ = range(1, STAR_NUMBER).pipe(
-	map((): Particle => {
+	map((): GameObject => {
 		const attribute = Math.random() * 3 + 1;
 		return {
 			x: Math.floor(Math.random() * canvas.width),
@@ -72,7 +74,7 @@ const stars$ = range(1, STAR_NUMBER).pipe(
 			width: attribute,
 			height: attribute,
 			speed: attribute,
-			color: 'white',
+			spriteOrColor: 'white',
 		}
 	}),
 	toArray(),
@@ -112,5 +114,5 @@ const gameLoop$ = interval(FPS).pipe(
 	})),
 	scan(updateState, initialState),
 	tap((state: State) => draw(ctx, scoreContainer, state)),
-	takeWhile(state => !state.isGameOver),
+	takeWhile((state: State) => !state.isGameOver),
 );

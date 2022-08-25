@@ -1,22 +1,22 @@
 import { BULLET_DEFAULT, CANVAS_HEIGHT, CANVAS_WIDTH, PLAYER_DEFAULT } from "./constants";
-import { GameObject, Input, Particle, Ship, State } from "./interfaces";
+import { GameObject, Input, State } from "./interfaces";
 
 export const getRandomIntInclusive = (min: number, max: number): number => (
 	Math.floor(Math.random() * (max - min + 1) + min)
 );
 
-export const generateEnemy = (template: Ship): Ship => ({
+export const generateEnemy = (template: GameObject): GameObject => ({
 	...template,
 	x: getRandomIntInclusive(0, CANVAS_WIDTH - template.width),
 	y: -template.height,
 });
 
-export const generateBullet = (ship: Ship, shootsUp: boolean, color: string): Particle => ({
+export const generateBullet = (ship: GameObject, shootsUp: boolean, color: string): GameObject => ({
 	...BULLET_DEFAULT,
 	x: ship.x + ship.width / 2 - BULLET_DEFAULT.width / 2,
 	y: shootsUp ? ship.y : ship.y + ship.height,
-	speed: ship.speed + 2,
-	color: color,
+	speed: ship.speed + 5,
+	spriteOrColor: color,
 });
 
 const collision = (object1: GameObject, object2: GameObject): boolean => (
@@ -41,12 +41,12 @@ const removeFromArray = (array: GameObject[], object: GameObject) => {
 }
 
 export const updateState = (state: State, input: Input): State => {
-	input.stars.forEach((star: GameObject) => {
+	for (const star of input.stars) {
 		move(
 			star, 0, star.speed,
 			() => { if (star.y >= CANVAS_HEIGHT) star.y = 0; }
 		);
-	});
+	}
 
 	let dx = 0;
 	let dy = 0;
@@ -83,36 +83,36 @@ export const updateState = (state: State, input: Input): State => {
 		}
 	);
 
-	state.player.shots.forEach(bullet => {
+	for (const bullet of state.playerShots) {
 		move (bullet, 0, -bullet.speed,
 			() => {
 				if (bullet.y <= 0) {
-					const index = state.player.shots.indexOf(bullet);
-					state.player.shots.splice(index, 1);
+					const index = state.playerShots.indexOf(bullet);
+					state.playerShots.splice(index, 1);
 				}
 			}
 		);
 
-		state.enemies.forEach(enemy => {
+		for (const enemy of state.enemies) {
 			if (collision(bullet, enemy)) {
 				const enemyIndex = state.enemies.indexOf(enemy);
 				state.enemies.splice(enemyIndex, 1);			
 				state.score += 1;
 
-				const bulletIndex = state.player.shots.indexOf(bullet);
-				state.player.shots.splice(bulletIndex, 1);
+				const bulletIndex = state.playerShots.indexOf(bullet);
+				state.playerShots.splice(bulletIndex, 1);
 			};
+		}
 
-		})
-	});
+	}
 
 	if (input.interval % 10 === 0 && input.keys.includes('Space')) {
-		state.player.shots.push(
+		state.playerShots.push(
 			generateBullet(state.player, true, 'green')
 		);
 	}
 
-	state.enemies.forEach((enemy, index) => {
+	for (const enemy of state.enemies) {
 		move(enemy, 0, enemy.speed,
 			() => {
 				if (enemy.y >= CANVAS_HEIGHT) {
@@ -125,22 +125,26 @@ export const updateState = (state: State, input: Input): State => {
 		if (collision(enemy, state.player)) {
 			state.isGameOver = true;
 		}
-		
-		// console.log('e ' + enemy.speed);
-		// console.log('enemy ' + index + ' bullets ', enemy.shots);
-		enemy.shots.forEach(bullet => {
-		// console.log('b ' + bullet.speed);
-			move(bullet, 0, bullet.speed,
-				() => {
-					if (bullet.y >= CANVAS_HEIGHT) {
-						const index = enemy.shots.indexOf(bullet);
-						enemy.shots.splice(index, 1);
-					}
-				}
-			);
-		})
-	});
 
+		if (
+			input.interval % 10 === 0 &&
+			getRandomIntInclusive(1, 10) === 1
+			// input.interval === 5
+		) {
+			state.enemyShots.push(generateBullet(enemy, true, 'red'));
+		}
+	}
+
+	for (const bullet of state.enemyShots) {
+		move(bullet, 0, bullet.speed,
+			() => {
+				if (bullet.y >= CANVAS_HEIGHT) {
+					const index = state.enemyShots.indexOf(bullet);
+					state.enemyShots.splice(index, 1);
+				}
+			}
+		);
+	}
 
 	return {
 		player: state.player,
@@ -148,5 +152,7 @@ export const updateState = (state: State, input: Input): State => {
 		score: state.score,
 		isGameOver: state.isGameOver,
 		stars: input.stars,	
+		playerShots: state.playerShots,
+		enemyShots: state.enemyShots
 	}
 };
