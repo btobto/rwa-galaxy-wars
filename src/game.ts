@@ -126,11 +126,7 @@ export const updateState = (state: State, input: Input): State => {
 			state.isGameOver = true;
 		}
 
-		if (
-			input.interval % 10 === 0 &&
-			getRandomIntInclusive(1, 10) === 1
-			// input.interval === 5
-		) {
+		if (input.interval % 10 === 0 && getRandomIntInclusive(1, 10) === 1) {
 			state.enemyShots.push(generateBullet(enemy, true, 'red'));
 		}
 	}
@@ -144,6 +140,13 @@ export const updateState = (state: State, input: Input): State => {
 				}
 			}
 		);
+
+		if (collision(bullet, state.player)) {
+			const bulletIndex = state.enemyShots.indexOf(bullet);
+			state.enemyShots.splice(bulletIndex, 1);
+
+			state.isGameOver = true;
+		}
 	}
 
 	return {
