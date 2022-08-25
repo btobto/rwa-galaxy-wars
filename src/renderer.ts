@@ -1,32 +1,46 @@
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from "./constants";
-import { GameObject, State } from "./interfaces";
+import { GameObject, Particle, Ship, State } from "./interfaces";
+
+const drawGameObject = (ctx: CanvasRenderingContext2D, object: GameObject) => {
+	if ('color' in object) {
+		ctx.fillStyle = (<Particle>object).color;
+		ctx.fillRect(object.x, object.y, object.width, object.height);
+	} else if ('sprite' in object) {
+		ctx.drawImage((<Ship>object).sprite, object.x, object.y, object.width, object.height);
+	}
+}
 
 export const draw = (
 	ctx: CanvasRenderingContext2D,
 	scoreContainer: HTMLElement,
 	state: State,
 ) => {
-	// canvas bg
+	if (state.isGameOver) {
+		scoreContainer.innerHTML = `GAME OVER. Score: ${state.score}`;
+		return;
+	} else {
+		scoreContainer.innerHTML = `Score: ${state.score}`;
+	}
+
 	ctx.fillStyle = 'black';
 	ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-	// stars
-	ctx.fillStyle = 'white';
 	state.stars.forEach((star: GameObject) => {
-		ctx.fillRect(star.x, star.y, star.width, star.height);
+		drawGameObject(ctx, star);
 	});
 
-	// enemies
 	state.enemies.forEach(enemy => {
-		ctx.drawImage(enemy.sprite, enemy.x, enemy.y, enemy.width, enemy.height);
+		drawGameObject(ctx, enemy);
+
+		enemy.shots.forEach(bullet => {
+			drawGameObject(ctx, bullet);
+		})
 	});
 
-	// player bullets
-	ctx.fillStyle = 'green';
-	state.playerBullets.forEach(bullet => {
-		ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+	state.player.shots.forEach(bullet => {
+		drawGameObject(ctx, bullet);
 	})
 
-	// player
-	ctx.drawImage(state.player.sprite, state.player.x, state.player.y, state.player.width, state.player.height);
+
+	drawGameObject(ctx, state.player);
 }

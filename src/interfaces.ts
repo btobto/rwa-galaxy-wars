@@ -4,21 +4,28 @@ export interface GameObject {
 	width: number,
 	height: number,
 	speed: number,
-	sprite?: HTMLImageElement,
 }
+
+export interface Ship extends GameObject {
+	sprite: HTMLImageElement,
+	shots: Particle[],
+}
+
+export interface Particle extends GameObject {
+	color: string,
+}
+
 export interface Input {
 	interval: number, 
 	keys: string[], 
-	stars: GameObject[], 
-	enemies: GameObject[],
+	stars: Particle[], 
+	enemies: Ship[],
 }
 
 export interface State {
-	player: GameObject,
-	enemies: GameObject[],
-	playerBullets: GameObject[],
-	enemyBullets: GameObject[]
+	player: Ship,
+	enemies: Ship[],
 	score: number,
 	isGameOver: boolean,
-	stars: GameObject[],
+	stars: Particle[],
 }

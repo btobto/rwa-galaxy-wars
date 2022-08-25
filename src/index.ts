@@ -1,8 +1,8 @@
-import { auditTime, concatAll, debounceTime, distinctUntilChanged, filter, forkJoin, fromEvent, interval, map, mapTo, merge, mergeAll, of, range, sample, sampleTime, scan, startWith, take, tap, throttleTime, timestamp, toArray, withLatestFrom, zip, zipWith } from "rxjs";
-import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES, ENEMY_FREQUENCY, CANVAS_WIDTH, CANVAS_HEIGHT, PLAYER_DEFAULT, ENEMY2_DEFAULT, ENEMY1_DEFAULT } from "./constants";
+import { combineLatest, distinctUntilChanged, forkJoin, fromEvent, interval, map, merge, mergeAll, mergeMap, of, range, sampleTime, scan, startWith, switchMap, take, takeWhile, tap, toArray, withLatestFrom } from "rxjs";
+import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES, ENEMY_FREQUENCY, CANVAS_WIDTH, CANVAS_HEIGHT, PLAYER_DEFAULT, ENEMY2_DEFAULT, ENEMY1_DEFAULT, ENEMY_SHOOTING_FREQUENCY, BULLET_DEFAULT } from "./constants";
 // import * as Constants from "./constants";
-import { getRandomIntInclusive, updateState } from "./game";
-import { GameObject, Input, State } from "./interfaces";
+import { generateBullet, generateEnemy, getRandomIntInclusive, updateState } from "./game";
+import { GameObject, Input, Particle, Ship, State } from "./interfaces";
 import { draw } from "./renderer";
 
 const scoreContainer = document.getElementById('score');
@@ -26,9 +26,11 @@ const spritesLoaded$ = forkJoin([
 	getData$,
 ]);
 
-spritesLoaded$.subscribe(() => galaxyWars$.subscribe());
+spritesLoaded$.subscribe(() => gameLoop$.subscribe());
 
-const player: GameObject = {
+ENEMY1_DEFAULT.sprite = sprites[1];
+ENEMY2_DEFAULT.sprite = sprites[2];
+const player: Ship = {
 	...PLAYER_DEFAULT,
 	x: canvas.width / 2 - PLAYER_DEFAULT.width / 2,
 	y: canvas.height / 1.5,
@@ -38,8 +40,6 @@ const player: GameObject = {
 const initialState: State = {
 	player: player,
 	enemies: [],
-	playerBullets: [],
-	enemyBullets: [],
 	score: 0,
 	isGameOver: false,
 	stars: [],
@@ -47,31 +47,24 @@ const initialState: State = {
 
 const enemies$ = interval(ENEMY_FREQUENCY).pipe(
 	startWith([]),
-	scan((enemyArray: GameObject[], interval: number) => {
-		let enemy: GameObject;
-		if (interval % 5 === 0) {
-			enemy = {
-				...ENEMY2_DEFAULT,
-				x: getRandomIntInclusive(0, CANVAS_WIDTH - ENEMY2_DEFAULT.width),
-				y: -ENEMY2_DEFAULT.height,
-				sprite: sprites[2],
-			};
+	scan((enemyArray: Ship[], intrvl: number) => {
+		let enemy: Ship;
+		if (intrvl % 5 === 0) {
+			enemy = generateEnemy(ENEMY2_DEFAULT);
 		} else {
-			enemy = {
-				...ENEMY1_DEFAULT,
-				x: getRandomIntInclusive(0, CANVAS_WIDTH - ENEMY1_DEFAULT.width),
-				y: -ENEMY1_DEFAULT.height,
-				sprite: sprites[1],
-			};
-		}
-		enemyArray.push(enemy);
+			enemy = generateEnemy(ENEMY1_DEFAULT);
+		};
 
+		enemyArray.push(enemy);
+		
 		return enemyArray;
+
 	}, []),
-)
+	// tap(e => console.log('enemies ', e)),
+);
 
 const stars$ = range(1, STAR_NUMBER).pipe(
-	map((): GameObject => {
+	map((): Particle => {
 		const attribute = Math.random() * 3 + 1;
 		return {
 			x: Math.floor(Math.random() * canvas.width),
@@ -79,6 +72,7 @@ const stars$ = range(1, STAR_NUMBER).pipe(
 			width: attribute,
 			height: attribute,
 			speed: attribute,
+			color: 'white',
 		}
 	}),
 	toArray(),
@@ -104,7 +98,7 @@ const keyboard$ = merge(keysDown$, keysUp$).pipe(
 	distinctUntilChanged(),
 );
 
-const galaxyWars$ = interval(FPS).pipe(
+const gameLoop$ = interval(FPS).pipe(
 	withLatestFrom(
 		keyboard$,
 		stars$,
@@ -118,4 +112,5 @@ const galaxyWars$ = interval(FPS).pipe(
 	})),
 	scan(updateState, initialState),
 	tap((state: State) => draw(ctx, scoreContainer, state)),
+	takeWhile(state => !state.isGameOver),
 );
