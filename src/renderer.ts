@@ -15,7 +15,7 @@ export const draw = (
 	scoreContainer: HTMLElement,
 	state: State,
 ) => {
-	if (state.isGameOver) {
+	if (state.gameOver) {
 		scoreContainer.innerHTML = `GAME OVER. Score: ${state.score}`;
 		return;
 	} else {
@@ -25,21 +25,7 @@ export const draw = (
 	ctx.fillStyle = 'black';
 	ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-	for (const star of state.stars) {
-		drawGameObject(ctx, star);
+	for (const object of state.stars.concat(state.enemies, state.playerShots, state.enemyShots, state.player)) {
+		drawGameObject(ctx, object);
 	}
-
-	for (const enemy of state.enemies) {
-		drawGameObject(ctx, enemy);
-	}
-
-	for (const bullet of state.playerShots) {
-		drawGameObject(ctx, bullet);
-
-	}
-	for (const bullet of state.enemyShots) {
-		drawGameObject(ctx, bullet);
-	}
-
-	drawGameObject(ctx, state.player);
 }

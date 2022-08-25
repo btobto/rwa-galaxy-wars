@@ -3,13 +3,13 @@ import { GameObject, Input, State } from "./interfaces";
 
 export const getRandomIntInclusive = (min: number, max: number): number => (
 	Math.floor(Math.random() * (max - min + 1) + min)
-);
+)
 
 export const generateEnemy = (template: GameObject): GameObject => ({
 	...template,
 	x: getRandomIntInclusive(0, CANVAS_WIDTH - template.width),
 	y: -template.height,
-});
+})
 
 export const generateBullet = (ship: GameObject, shootsUp: boolean, color: string): GameObject => ({
 	...BULLET_DEFAULT,
@@ -17,12 +17,12 @@ export const generateBullet = (ship: GameObject, shootsUp: boolean, color: strin
 	y: shootsUp ? ship.y : ship.y + ship.height,
 	speed: ship.speed + 5,
 	spriteOrColor: color,
-});
+})
 
 const collision = (object1: GameObject, object2: GameObject): boolean => (
 	object1.x < object2.x + object2.width && object1.x + object1.width > object2.x &&
 	object1.y < object2.y + object2.height && object1.y + object1.height > object2.y
-);
+)
 
 const move = (
 	object: GameObject, 
@@ -40,8 +40,29 @@ const removeFromArray = (array: GameObject[], object: GameObject) => {
 	array.splice(index, 1);
 }
 
+const calculateScore = (oldScore: number, playerShots: GameObject[], enemies: GameObject[]): number => {
+	let newPoints = 0;
+	for(const bullet of playerShots) {
+		for (const enemy of enemies) {
+			if (collision(bullet, enemy)) {			
+				removeFromArray(enemies, enemy);
+				removeFromArray(playerShots, bullet);
+				newPoints += 1;
+			};
+		}
+	}
+	return oldScore + newPoints;
+}
+
+const gameOver = (player: GameObject, enemies: GameObject[], enemyShots: GameObject[]): boolean => {
+	for (const object of enemies.concat(enemyShots)) {
+		if (collision(object, player)) return true;
+	}
+	return false;
+}
+
 export const updateState = (state: State, input: Input): State => {
-	for (const star of input.stars) {
+	for (const star of state.stars) {
 		move(
 			star, 0, star.speed,
 			() => { if (star.y >= CANVAS_HEIGHT) star.y = 0; }
@@ -83,77 +104,41 @@ export const updateState = (state: State, input: Input): State => {
 		}
 	);
 
-	for (const bullet of state.playerShots) {
-		move (bullet, 0, -bullet.speed,
-			() => {
-				if (bullet.y <= 0) {
-					const index = state.playerShots.indexOf(bullet);
-					state.playerShots.splice(index, 1);
-				}
-			}
-		);
-
-		for (const enemy of state.enemies) {
-			if (collision(bullet, enemy)) {
-				const enemyIndex = state.enemies.indexOf(enemy);
-				state.enemies.splice(enemyIndex, 1);			
-				state.score += 1;
-
-				const bulletIndex = state.playerShots.indexOf(bullet);
-				state.playerShots.splice(bulletIndex, 1);
-			};
-		}
-
-	}
-
 	if (input.interval % 10 === 0 && input.keys.includes('Space')) {
 		state.playerShots.push(
 			generateBullet(state.player, true, 'green')
 		);
 	}
 
+	for (const bullet of state.playerShots) {
+		move (bullet, 0, -bullet.speed,
+			() => {	if (bullet.y <= 0) removeFromArray(state.playerShots, bullet); }
+		);
+	}
+
 	for (const enemy of state.enemies) {
 		move(enemy, 0, enemy.speed,
-			() => {
-				if (enemy.y >= CANVAS_HEIGHT) {
-					const index = state.enemies.indexOf(enemy);
-					state.enemies.splice(index, 1);			
-				}
-			}
+			() => {	if (enemy.y >= CANVAS_HEIGHT) removeFromArray(state.enemies, enemy); }
 		);
 
-		if (collision(enemy, state.player)) {
-			state.isGameOver = true;
-		}
-
 		if (input.interval % 10 === 0 && getRandomIntInclusive(1, 10) === 1) {
-			state.enemyShots.push(generateBullet(enemy, true, 'red'));
-		}
+			state.enemyShots.push(
+				generateBullet(enemy, true, 'red')
+			);
+		}	
 	}
 
 	for (const bullet of state.enemyShots) {
 		move(bullet, 0, bullet.speed,
-			() => {
-				if (bullet.y >= CANVAS_HEIGHT) {
-					const index = state.enemyShots.indexOf(bullet);
-					state.enemyShots.splice(index, 1);
-				}
-			}
+			() => {	if (bullet.y >= CANVAS_HEIGHT) removeFromArray(state.enemyShots, bullet); }
 		);
-
-		if (collision(bullet, state.player)) {
-			const bulletIndex = state.enemyShots.indexOf(bullet);
-			state.enemyShots.splice(bulletIndex, 1);
-
-			state.isGameOver = true;
-		}
 	}
 
 	return {
 		player: state.player,
 		enemies: input.enemies,
-		score: state.score,
-		isGameOver: state.isGameOver,
+		score: calculateScore(state.score, state.playerShots, input.enemies),
+		gameOver: gameOver(state.player, input.enemies, state.enemyShots),
 		stars: input.stars,	
 		playerShots: state.playerShots,
 		enemyShots: state.enemyShots

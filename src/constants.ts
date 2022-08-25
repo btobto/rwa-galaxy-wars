@@ -1,10 +1,11 @@
 import { GameObject } from "./interfaces";
 
+export const API_URL = 'http://localhost:3000';
+
 export const FPS = 1000 / 60;
 export const STAR_NUMBER = 200;
 export const SPRITE_PATH = './src/assets';
 export const ENEMY_FREQUENCY = 300;
-export const ENEMY_SHOOTING_FREQUENCY = 400;
 export const CANVAS_WIDTH = 1000;
 export const CANVAS_HEIGHT = 700;
 

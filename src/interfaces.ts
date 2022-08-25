@@ -20,6 +20,6 @@ export interface State {
 	enemies: GameObject[],
 	enemyShots: GameObject[],
 	score: number,
-	isGameOver: boolean,
+	gameOver: boolean,
 	stars: GameObject[],
 }

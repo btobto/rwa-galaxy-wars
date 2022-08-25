@@ -1,7 +1,6 @@
-import { combineLatest, distinctUntilChanged, forkJoin, fromEvent, interval, map, merge, mergeAll, mergeMap, of, range, sampleTime, scan, startWith, switchMap, take, takeWhile, tap, toArray, withLatestFrom } from "rxjs";
-import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES, ENEMY_FREQUENCY, CANVAS_WIDTH, CANVAS_HEIGHT, PLAYER_DEFAULT, ENEMY2_DEFAULT, ENEMY1_DEFAULT, ENEMY_SHOOTING_FREQUENCY, BULLET_DEFAULT } from "./constants";
-// import * as Constants from "./constants";
-import { generateBullet, generateEnemy, getRandomIntInclusive, updateState } from "./game";
+import { distinctUntilChanged, forkJoin, from, fromEvent, interval, map, merge, of, range, scan, startWith, switchMap, take, takeWhile, tap, toArray, withLatestFrom } from "rxjs";
+import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES, ENEMY_FREQUENCY, CANVAS_WIDTH, CANVAS_HEIGHT, PLAYER_DEFAULT, ENEMY2_DEFAULT, ENEMY1_DEFAULT, API_URL } from "./constants";
+import { generateEnemy, updateState } from "./game";
 import { GameObject, Input, State } from "./interfaces";
 import { draw } from "./renderer";
 
@@ -20,10 +19,20 @@ const sprites: HTMLImageElement[] = SPRITE_NAMES.map((name: string) => {
 
 // todo
 const getData$ = of(undefined);
+// const getData$ = from(fetch(`${API_URL}/constants`)
+// 	.then(res => {
+// 		if (!res.ok) {
+// 			throw new Error('Error fetching constants.');
+// 		} else {
+// 			return res.json();
+// 		}
+// 	})
+// 	.catch(e => console.error(e))
+// );
 
 const spritesLoaded$ = forkJoin([
 	...sprites.map(sprite => fromEvent(sprite, 'load').pipe(take(1))),
-	getData$,
+	getData$
 ]);
 
 spritesLoaded$.subscribe(() => gameLoop$.subscribe());
@@ -41,7 +50,7 @@ const initialState: State = {
 	player: player,
 	enemies: [],
 	score: 0,
-	isGameOver: false,
+	gameOver: false,
 	stars: [],
 	playerShots: [],
 	enemyShots: [],
@@ -60,9 +69,7 @@ const enemies$ = interval(ENEMY_FREQUENCY).pipe(
 		enemyArray.push(enemy);
 		
 		return enemyArray;
-
 	}, []),
-	// tap(e => console.log('enemies ', e)),
 );
 
 const stars$ = range(1, STAR_NUMBER).pipe(
@@ -114,5 +121,5 @@ const gameLoop$ = interval(FPS).pipe(
 	})),
 	scan(updateState, initialState),
 	tap((state: State) => draw(ctx, scoreContainer, state)),
-	takeWhile((state: State) => !state.isGameOver),
+	takeWhile((state: State) => !state.gameOver),
 );
