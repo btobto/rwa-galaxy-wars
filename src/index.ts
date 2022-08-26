@@ -1,5 +1,5 @@
-import { distinctUntilChanged, forkJoin, from, fromEvent, interval, map, merge, of, range, scan, startWith, switchMap, take, takeWhile, tap, toArray, withLatestFrom } from "rxjs";
-import { FPS, STAR_NUMBER, SPRITE_PATH, SPRITE_NAMES, ENEMY_FREQUENCY, CANVAS_WIDTH, CANVAS_HEIGHT, PLAYER_DEFAULT, ENEMY2_DEFAULT, ENEMY1_DEFAULT, API_URL } from "./constants";
+import { distinctUntilChanged, from, fromEvent, interval, map, merge, mergeMap, Observable, range, scan, startWith, switchMap, take, takeWhile, tap, toArray, withLatestFrom } from "rxjs";
+import { FPS, STAR_NUMBER, ENEMY_FREQUENCY, CANVAS_WIDTH, CANVAS_HEIGHT, PLAYER_TEMPLATE, ENEMY2_TEMPLATE, ENEMY1_TEMPLATE, API_URL, INITIAL_STATE } from "./constants";
 import { generateEnemy, updateState } from "./game";
 import { GameObject, Input, State } from "./interfaces";
 import { draw } from "./renderer";
@@ -11,59 +11,56 @@ const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
 
-const sprites: HTMLImageElement[] = SPRITE_NAMES.map((name: string) => {
-	const sprite = new Image();
-	sprite.src = `${SPRITE_PATH}/${name}`;
-	return sprite;
-});
-
-// todo
-const getData$ = of(undefined);
-// const getData$ = from(fetch(`${API_URL}/constants`)
-// 	.then(res => {
-// 		if (!res.ok) {
-// 			throw new Error('Error fetching constants.');
-// 		} else {
-// 			return res.json();
-// 		}
-// 	})
-// 	.catch(e => console.error(e))
-// );
-
-const spritesLoaded$ = forkJoin([
-	...sprites.map(sprite => fromEvent(sprite, 'load').pipe(take(1))),
-	getData$
-]);
-
-spritesLoaded$.subscribe(() => gameLoop$.subscribe());
-
-ENEMY1_DEFAULT.spriteOrColor = sprites[1];
-ENEMY2_DEFAULT.spriteOrColor = sprites[2];
 const player: GameObject = {
-	...PLAYER_DEFAULT,
-	x: canvas.width / 2 - PLAYER_DEFAULT.width / 2,
+	...PLAYER_TEMPLATE,
+	x: canvas.width / 2 - PLAYER_TEMPLATE.width / 2,
 	y: canvas.height / 1.5,
-	spriteOrColor: sprites[0],
 };
+INITIAL_STATE.player = player;
 
-const initialState: State = {
-	player: player,
-	enemies: [],
-	score: 0,
-	gameOver: false,
-	stars: [],
-	playerShots: [],
-	enemyShots: [],
-};
+const fetchData$ = <T>(name: string): Observable<T> => {
+	return from(fetch(`${API_URL}/${name}`)
+		.then(res => {
+			if (!res.ok) {
+				throw new Error('Error fetching data.');
+			} else {
+				return res.json();
+			}
+		})
+		.catch(e => console.error(e))
+	);
+}
+
+const sprites$ = fetchData$<{
+	path: string,
+	images: string[] 
+}>('sprites').pipe(
+	map((data) => data.images.map(img => {
+		const sprite = new Image();
+		sprite.src = `${data.path}/${img}`;
+		return sprite;
+	})),
+	tap((sprites: HTMLImageElement[]) => {
+		player.spriteOrColor = sprites[0];
+		ENEMY1_TEMPLATE.spriteOrColor = sprites[1];
+		ENEMY2_TEMPLATE.spriteOrColor = sprites[2];
+	}),
+	switchMap((sprites: HTMLImageElement[]) => from(sprites)),
+	mergeMap((sprite: HTMLImageElement) => fromEvent(sprite, 'load').pipe(take(1))),
+	toArray(),
+	// tap(a => console.log(a)),
+)
+
+sprites$.subscribe(() => gameLoop$.subscribe());
 
 const enemies$ = interval(ENEMY_FREQUENCY).pipe(
 	startWith([]),
 	scan((enemyArray: GameObject[], intrvl: number) => {
 		let enemy: GameObject;
 		if (intrvl % 5 === 0) {
-			enemy = generateEnemy(ENEMY2_DEFAULT);
+			enemy = generateEnemy(ENEMY2_TEMPLATE);
 		} else {
-			enemy = generateEnemy(ENEMY1_DEFAULT);
+			enemy = generateEnemy(ENEMY1_TEMPLATE);
 		};
 
 		enemyArray.push(enemy);
@@ -87,10 +84,10 @@ const stars$ = range(1, STAR_NUMBER).pipe(
 	toArray(),
 )
 
-const keysDown$ = fromEvent(document, 'keydown');
-const keysUp$ = fromEvent(document, 'keyup');
-
-const keyboard$ = merge(keysDown$, keysUp$).pipe(
+const keyboard$ = merge(
+	fromEvent(document, 'keydown'),
+	fromEvent(document, 'keyup'),
+).pipe(
 	startWith([]),
 	scan((buffer: string[], event: KeyboardEvent): string[] => {
 		const result = [...buffer];
@@ -119,7 +116,7 @@ const gameLoop$ = interval(FPS).pipe(
 		stars: data[2],
 		enemies: data[3],
 	})),
-	scan(updateState, initialState),
+	scan(updateState, INITIAL_STATE),
 	tap((state: State) => draw(ctx, scoreContainer, state)),
 	takeWhile((state: State) => !state.gameOver),
 );

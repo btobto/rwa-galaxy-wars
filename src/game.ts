@@ -1,4 +1,4 @@
-import { BULLET_DEFAULT, CANVAS_HEIGHT, CANVAS_WIDTH, PLAYER_DEFAULT } from "./constants";
+import { BULLET_TEMPLATE, CANVAS_HEIGHT, CANVAS_WIDTH } from "./constants";
 import { GameObject, Input, State } from "./interfaces";
 
 export const getRandomIntInclusive = (min: number, max: number): number => (
@@ -12,8 +12,8 @@ export const generateEnemy = (template: GameObject): GameObject => ({
 })
 
 export const generateBullet = (ship: GameObject, shootsUp: boolean, color: string): GameObject => ({
-	...BULLET_DEFAULT,
-	x: ship.x + ship.width / 2 - BULLET_DEFAULT.width / 2,
+	...BULLET_TEMPLATE,
+	x: ship.x + ship.width / 2 - BULLET_TEMPLATE.width / 2,
 	y: shootsUp ? ship.y : ship.y + ship.height,
 	speed: ship.speed + 5,
 	spriteOrColor: color,

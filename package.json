@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack",
     "watch": "webpack --watch",
-    "watch-dev": "webpack --watch --mode=development"
+    "watch-dev": "webpack --watch --mode=development",
+    "api": "json-server --watch db.json"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +20,7 @@
     "webpack-cli": "^4.10.0"
   },
   "dependencies": {
+    "json-server": "^0.17.0",
     "rxjs": "^7.5.6"
   }
 }

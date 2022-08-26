@@ -1,47 +1,10 @@
 {
-	"constants": {
-		"frames": 60,
-		"star_number": 200,
-		"sprite_path": "./src/assets'",
-		"enemy_frequency": 300,
-		"canvas_width": 1000,
-		"canvas_height": 700,
-		"sprite_names": [
+	"sprites": {
+		"path": "./src/assets",
+		"images": [
 			"player.png",
 			"enemy1.png",
 			"enemy2.png"
-		],
-		"player_default": {
-			"x": 0,
-			"y": 0,
-			"width": 50,
-			"height": 50,
-			"speed": 5,
-			"spriteOrColor": null
-		},
-		"enemy1_default": {
-			"x": 0,
-			"y": 0,
-			"width": 50,
-			"height": 54,
-			"speed": 5,
-			"spriteOrColor": null
-		},
-		"enemy2_default": {
-			"x": 0,
-			"y": 0,
-			"width": 56,
-			"height": 58,
-			"speed": 8,
-			"spriteOrColor": null
-		},
-		"bullet_default": {
-			"x": 0,
-			"y": 0,
-			"width": 4,
-			"height": 10,
-			"speed": 0,
-			"spriteOrColor": null
-		}
+		]
 	}
 }

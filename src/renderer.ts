@@ -15,11 +15,14 @@ export const draw = (
 	scoreContainer: HTMLElement,
 	state: State,
 ) => {
+	scoreContainer.innerHTML = `Score: ${state.score}`;
+
 	if (state.gameOver) {
-		scoreContainer.innerHTML = `GAME OVER. Score: ${state.score}`;
+		ctx.fillStyle = 'red';
+		ctx.font = '80px JetBrains Mono';
+		ctx.textAlign = 'center';
+		ctx.fillText('GAME OVER', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
 		return;
-	} else {
-		scoreContainer.innerHTML = `Score: ${state.score}`;
 	}
 
 	ctx.fillStyle = 'black';

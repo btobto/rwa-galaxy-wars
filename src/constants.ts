@@ -1,21 +1,24 @@
-import { GameObject } from "./interfaces";
+import { GameObject, State } from "./interfaces";
 
 export const API_URL = 'http://localhost:3000';
 
 export const FPS = 1000 / 60;
 export const STAR_NUMBER = 200;
-export const SPRITE_PATH = './src/assets';
 export const ENEMY_FREQUENCY = 300;
 export const CANVAS_WIDTH = 1000;
 export const CANVAS_HEIGHT = 700;
 
-export const SPRITE_NAMES = [
-	'player.png',
-	'enemy1.png',
-	'enemy2.png',
-];
+export const INITIAL_STATE: State = {
+	player: null,
+	enemies: [],
+	score: 0,
+	gameOver: false,
+	stars: [],
+	playerShots: [],
+	enemyShots: [],
+};
 
-export const PLAYER_DEFAULT: GameObject = {
+export const PLAYER_TEMPLATE: GameObject = {
 	x: 0,
 	y: 0,
 	width: 50,
@@ -24,7 +27,7 @@ export const PLAYER_DEFAULT: GameObject = {
 	spriteOrColor: null,
 };
 
-export const ENEMY1_DEFAULT: GameObject = {
+export const ENEMY1_TEMPLATE: GameObject = {
 	x: 0,
 	y: 0,
 	width: 50,
@@ -33,7 +36,7 @@ export const ENEMY1_DEFAULT: GameObject = {
 	spriteOrColor: null,
 };
 
-export const ENEMY2_DEFAULT: GameObject = {
+export const ENEMY2_TEMPLATE: GameObject = {
 	x: 0,
 	y: 0,
 	width: 56,
@@ -42,7 +45,7 @@ export const ENEMY2_DEFAULT: GameObject = {
 	spriteOrColor: null,
 };
 
-export const BULLET_DEFAULT: GameObject = {
+export const BULLET_TEMPLATE: GameObject = {
 	x: 0,
 	y: 0,
 	width: 4,
