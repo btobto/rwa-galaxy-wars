@@ -1,4 +1,3 @@
-# [RWA] Galaxy Wars
-## RxJS projekat
+# [RWA] Galaxy Wars (RxJS)
 
 ![game](./pictures/game.png)
