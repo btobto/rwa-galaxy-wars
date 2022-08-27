@@ -123,7 +123,7 @@ export const updateState = (state: State, input: Input): State => {
 
 		if (input.interval % 10 === 0 && getRandomIntInclusive(1, 10) === 1) {
 			state.enemyShots.push(
-				generateBullet(enemy, true, 'red')
+				generateBullet(enemy, false, 'red')
 			);
 		}	
 	}
