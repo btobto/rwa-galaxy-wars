@@ -24,17 +24,6 @@ const collision = (object1: GameObject, object2: GameObject): boolean => (
 	object1.y < object2.y + object2.height && object1.y + object1.height > object2.y
 )
 
-const move = (
-	object: GameObject, 
-	distanceX: number, 
-	distanceY: number,
-	correctPosition: () => void
-) => {
-	object.x += distanceX;
-	object.y += distanceY;
-	correctPosition();
-} 
-
 const removeFromArray = (array: GameObject[], object: GameObject) => {
 	const index = array.indexOf(object);
 	array.splice(index, 1);
@@ -42,7 +31,7 @@ const removeFromArray = (array: GameObject[], object: GameObject) => {
 
 const calculateScore = (oldScore: number, playerShots: GameObject[], enemies: GameObject[]): number => {
 	let newPoints = 0;
-	for(const bullet of playerShots) {
+	for (const bullet of playerShots) {
 		for (const enemy of enemies) {
 			if (collision(bullet, enemy)) {			
 				removeFromArray(enemies, enemy);
@@ -61,78 +50,100 @@ const gameOver = (player: GameObject, enemies: GameObject[], enemyShots: GameObj
 	return false;
 }
 
-export const updateState = (state: State, input: Input): State => {
-	for (const star of state.stars) {
-		move(
-			star, 0, star.speed,
-			() => { if (star.y >= CANVAS_HEIGHT) star.y = 0; }
+const updateStars = (stars: GameObject[]) => {
+	for (const star of stars) {
+		star.y += star.speed;
+
+		if (star.y >= CANVAS_HEIGHT) star.y = 0;
+	}
+}
+
+const updatePlayer = (player: GameObject, keys: string[]) => {
+	let dX = 0;
+	let dY = 0;
+
+	if (keys.includes('ArrowLeft')) {
+		dX -= player.speed;
+	}
+	if (keys.includes('ArrowRight')) {
+		dX += player.speed;
+	}
+	if (keys.includes('ArrowUp')) {
+		dY -= player.speed;
+	}
+	if (keys.includes('ArrowDown')) {
+		dY += player.speed;
+	}
+
+	player.x += dX;
+	player.y += dY;
+
+	if (player.x < 0) {
+		player.x = 0;
+	} else if (player.x + player.width >= CANVAS_WIDTH) {
+		player.x = CANVAS_WIDTH - player.width;
+	}
+
+	if (player.y < 0) {
+		player.y = 0;
+	} else if (player.y + player.height >= CANVAS_HEIGHT) {
+		player.y = CANVAS_HEIGHT - player.height;
+	}
+}
+
+const updatePlayerShots = (
+	player: GameObject, 
+	playerShots: GameObject[], 
+	keys: string[], 
+	interval: number
+) => {
+	if (interval % 10 === 0 && keys.includes('Space')) {
+		playerShots.push(
+			generateBullet(player, true, 'green')
 		);
 	}
 
-	let dx = 0;
-	let dy = 0;
+	for (const bullet of playerShots) {
+		bullet.y -= bullet.speed;
 
-	if (input.keys.includes('ArrowLeft')) {
-		dx -= state.player.speed;
+		if (bullet.y <= 0) removeFromArray(playerShots, bullet); 
 	}
-	if (input.keys.includes('ArrowRight')) {
-		dx += state.player.speed;
+}
+
+const updateEnemies = (enemies: GameObject[]) => {
+	for (const enemy of enemies) {
+		enemy.y += enemy.speed;
+
+		if (enemy.y >= CANVAS_HEIGHT) removeFromArray(enemies, enemy);
 	}
-	if (input.keys.includes('ArrowUp')) {
-		dy -= state.player.speed;
-	}
-	if (input.keys.includes('ArrowDown')) {
-		dy += state.player.speed;
-	}
+}
 
-	move(
-		state.player, dx, dy,
-		() => {
-			if (state.player.x < 0) {
-				state.player.x = 0;
-			}
-			else if (state.player.x + state.player.width >= CANVAS_WIDTH) {
-				state.player.x = CANVAS_WIDTH - state.player.width;
-			}
-
-			if (state.player.y < 0) {
-				state.player.y = 0;
-			}
-			else if (state.player.y + state.player.height >= CANVAS_HEIGHT) {
-				state.player.y = CANVAS_HEIGHT - state.player.height;
-			}
-		}
-	);
-
-	if (input.interval % 10 === 0 && input.keys.includes('Space')) {
-		state.playerShots.push(
-			generateBullet(state.player, true, 'green')
-		);
-	}
-
-	for (const bullet of state.playerShots) {
-		move (bullet, 0, -bullet.speed,
-			() => {	if (bullet.y <= 0) removeFromArray(state.playerShots, bullet); }
-		);
-	}
-
-	for (const enemy of state.enemies) {
-		move(enemy, 0, enemy.speed,
-			() => {	if (enemy.y >= CANVAS_HEIGHT) removeFromArray(state.enemies, enemy); }
-		);
-
-		if (input.interval % 10 === 0 && getRandomIntInclusive(1, 10) === 1) {
-			state.enemyShots.push(
+const updateEnemyShots = (
+	enemies: GameObject[], 
+	enemyShots: GameObject[], 
+	interval: number
+) => {
+	for (const enemy of enemies) {
+		if (interval % 10 === 0 && getRandomIntInclusive(1, 10) === 1) {
+			enemyShots.push(
 				generateBullet(enemy, false, 'red')
 			);
 		}	
 	}
 
-	for (const bullet of state.enemyShots) {
-		move(bullet, 0, bullet.speed,
-			() => {	if (bullet.y >= CANVAS_HEIGHT) removeFromArray(state.enemyShots, bullet); }
-		);
+	for (const bullet of enemyShots) {
+		bullet.y += bullet.speed;
+
+		if (bullet.y >= CANVAS_HEIGHT) removeFromArray(enemyShots, bullet);
 	}
+}
+
+export const updateState = (state: State, input: Input): State => {
+	updateStars(input.stars);
+	updatePlayer(state.player, input.keys);
+	updatePlayerShots(state.player, state.playerShots, input.keys, input.interval);	
+	updateEnemies(input.enemies);
+	updateEnemyShots(input.enemies, state.enemyShots, input.interval);
 
 	return {
 		player: state.player,
